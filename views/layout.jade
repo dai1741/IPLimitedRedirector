@@ -1,6 +1,20 @@
-html
-  head 
-    title Custom Pages Example
+doctype 5
+html(lang='ja')
+  head
+    meta(charset='UTF-8')
+    script(src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js')
+    //if lt IE 9
+      script(src="http://html5shiv.googlecode.com/svn/trunk/html5.js")
+    link(rel="stylesheet", type="text/css", href="css/kickstart.css", media="all")
+    link(rel="stylesheet", type="text/css", href="style.css", media="all")
+    script(src='js/prettify.js')
+    script(src='js/kickstart.js')
+    block metas
   body
-    h1 My Site
-    block content
+    #wrap.clearfix
+      h1 My Site
+      block header
+      .clear
+      block content
+      .clear
+      block footer
