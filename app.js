@@ -3,12 +3,13 @@
  * Module dependencies.
  */
 
-var express = require('../../')
-  , app = module.exports = express()
+var express = require('express')
+  , app = module.exports = express.createServer()
   , silent = 'test' == process.env.NODE_ENV;
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'jade');
+app.set('view options', {layout: false})
 
 app.use(express.favicon());
 
@@ -91,5 +92,5 @@ app.get('/500', function(req, res, next){
 
 if (!module.parent) {
   app.listen(3000);
-  silent || console.log('Express started on port 3000');
+  silent || console.log('Express started on port 3000');
 }
