@@ -58,6 +58,24 @@ app.get '/', (req, res) ->
 app.get '/404', (req, res, next) ->
   next()
 
+app.get '/r/:hash', connectDb, (req, res, next) ->
+  [hash, check] = req.params.hash.match(/([0-9a-zA-Z]+)(\+?)/)[1..2]
+  unless hash?
+    next()
+    return
+  req.dbClient.query("SELECT * from urls where hash = $1 limit 1", [hash], (err, result) ->
+    if err
+      next(new Error(err))
+    else if result.rowCount == 0
+      next()
+    else
+      url = result.rows[0].long_url
+      if check
+        res.send(url + ' checking!!!')
+      else
+        res.send(url + ' redirecting!!!')
+  )
+
 app.get '/403', (req, res, next) ->
   err = new Error('not allowed!')
   err.status = 403
