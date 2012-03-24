@@ -58,23 +58,26 @@ app.get '/', (req, res) ->
 app.get '/404', (req, res, next) ->
   next()
 
-app.get '/r/:hash', connectDb, (req, res, next) ->
-  [hash, check] = req.params.hash.match(/([0-9a-zA-Z]+)(\+?)/)[1..2]
-  unless hash?
-    next()
-    return
-  req.dbClient.query("SELECT * from urls where hash = $1 limit 1", [hash], (err, result) ->
-    if err
-      next(new Error(err))
-    else if result.rowCount == 0
+getRedirection = (callback) ->
+  (req, res, next) ->
+    hash = req.params.hash
+    unless /[0-9a-zA-Z]+/.test(hash)
       next()
-    else
-      url = result.rows[0].long_url
-      if check
-        res.render('confirm-url', url: url)
+      return
+    req.dbClient.query("SELECT * from urls where hash = $1 limit 1", [hash], (err, result) ->
+      if err
+        next(new Error(err))
+      else if result.rowCount == 0
+        next()
       else
-        res.redirect(url)
-  )
+        callback(res, req, result.rows[0].long_url, result, next)
+    )
+
+app.get '/r/:hash', connectDb, getRedirection (res, req, url) ->
+    res.redirect(url)
+
+app.get '/c/:hash', connectDb, getRedirection (res, req, url) ->
+    res.render('confirm-url', url: url)
 
 app.get '/403', (req, res, next) ->
   err = new Error('not allowed!')
