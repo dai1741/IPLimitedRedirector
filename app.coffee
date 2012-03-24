@@ -71,9 +71,9 @@ app.get '/r/:hash', connectDb, (req, res, next) ->
     else
       url = result.rows[0].long_url
       if check
-        res.send(url + ' checking!!!')
+        res.render('confirm-url', url: url)
       else
-        res.send(url + ' redirecting!!!')
+        res.redirect(url)
   )
 
 app.get '/403', (req, res, next) ->

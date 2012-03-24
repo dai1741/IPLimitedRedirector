@@ -1,0 +1,19 @@
+
+extends layout
+
+block metas
+  title ジャンプ先の確認
+  style
+    .redirect {
+      font-size: 180%;
+      display: block;
+      line-height: 1.5
+    }
+
+block content
+  .col_12
+    h1 ジャンプ先の確認
+    p
+      | あなたは
+      a.redirect(href=url) #{url}
+      | に移動しようとしています。よろしければリンクをクリックしてください
