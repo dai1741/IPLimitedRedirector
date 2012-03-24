@@ -1,5 +1,10 @@
 
-extends error
+extends layout
+
+block metas
+  title Not Found
 
 block content
-  h3 Cannot find #{url}
+  .col_12
+    h1 404
+    h2 Cannot find #{url}
