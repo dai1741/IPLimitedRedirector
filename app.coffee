@@ -45,6 +45,13 @@ app.use (err, req, res, next) ->
 
 # Routes
 
+connectDb = (req, res, next) ->
+  pg.connect env.DATABASE_URL, (err, client) ->
+    req.dbClient = client
+    if err
+      next(new Error(err))
+    else next()
+
 app.get '/', (req, res) ->
   res.render('index.jade')
 
@@ -58,6 +65,14 @@ app.get '/403', (req, res, next) ->
 
 app.get '/500', (req, res, next) ->
   next(new Error('keyboard cat!'))
+
+# db
+
+( ->
+  req = {}
+  connectDb req, null, (err) ->
+    require('./db-initializer').init(req.dbClient) unless err
+)()
 
 unless module.parent
   app.listen(env.PORT)
