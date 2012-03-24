@@ -58,6 +58,16 @@ app.get '/', (req, res) ->
 app.get '/404', (req, res, next) ->
   next()
 
+isAcceptableIp = (userIp, requiredIp, prefixMask) ->
+  addresses = []
+  for ip, i in [userIp, requiredIp]
+    sections = ip.split(/\./)
+    return false if sections.length != 4
+    return false unless sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256
+    addresses[i] = (sections.reduce (k, x) -> k * 256 + +x) & -(1 << 32 - prefixMask)
+    
+  return addresses[0] == addresses[1]
+
 getRedirection = (callback) ->
   (req, res, next) ->
     hash = req.params.hash
@@ -70,7 +80,11 @@ getRedirection = (callback) ->
       else if result.rowCount == 0
         next()
       else
-        callback(res, req, result.rows[0].long_url, result, next)
+        row = result.rows[0]
+        if isAcceptableIp req.connection.remoteAddress, row.ip_address, row.prefix
+          callback(res, req, row.long_url, result, next)
+        else
+          next(new Error('Not in range!'))
     )
 
 app.get '/r/:hash', connectDb, getRedirection (res, req, url) ->
