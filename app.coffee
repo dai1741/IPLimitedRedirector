@@ -58,13 +58,17 @@ app.get '/', (req, res) ->
 app.get '/404', (req, res, next) ->
   next()
 
+isValidSplitIp = (sections) ->
+    return (sections.length == 4 and
+        sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256)
+
 isAcceptableIp = (userIp, requiredIp, prefixMask) ->
   addresses = []
   for ip, i in [userIp, requiredIp]
     sections = ip.split(/\./)
-    return false if sections.length != 4
-    return false unless sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256
-    addresses[i] = (sections.reduce (k, x) -> k * 256 + +x) & -(1 << 32 - prefixMask)
+    return false unless isValidSplitIp(sections)
+    addresses[i] = (sections.reduce ((k, x) -> k * 256 + +x), 0) \
+        & -(1 << 32 - prefixMask)
     
   return addresses[0] == addresses[1]
 
@@ -88,10 +92,43 @@ getRedirection = (callback) ->
     )
 
 app.get '/r/:hash', connectDb, getRedirection (res, req, url) ->
-    res.redirect(url)
+  res.redirect(url)
 
 app.get '/c/:hash', connectDb, getRedirection (res, req, url) ->
-    res.render('confirm-url', url: url)
+  res.render('confirm-url', url: url)
+
+
+validateRedrection = (req, res, next) ->
+  {longUrl, ipAddress, prefixMask} = req.postingData =
+    longUrl: req.param('url', '')
+    ipAddress: req.param('ip-address', '')
+    prefixMask: +req.param('prefix-mask', 0)
+  
+  isValid = /^https?:\/\//.test(longUrl) \
+      and isValidSplitIp(ipAddress.split /\./) and 0 < prefixMask <= 32
+  
+  if isValid then next()
+  else next(new Error('invalid!!'))
+
+app.post '/redirects/new', validateRedrection, connectDb, (req, res, next) ->
+  {longUrl, ipAddress, prefixMask} = req.postingData
+  allChar = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  tryInsert = () ->
+    hash = (allChar.charAt(Math.floor Math.random() * allChar.length) \
+        for i in [1..6.9 + Math.random() * 2.1]).join('')
+    req.dbClient.query('INSERT INTO urls(
+        long_url, hash, ip_address, network_prefix) VALUES($1, $2, $3, $4)',
+        [longUrl, hash, ipAddress, prefixMask], (err, result) ->
+          if err
+            console.log err
+            if err.code is 23505 # UNIQUE VIOLATION
+              tryInsert() # re-create hash and retry
+            else
+              next(new Error(err))
+          else
+            res.send "created at: #{env.URL}/r/#{hash}"
+    )
+  tryInsert()
 
 app.get '/403', (req, res, next) ->
   err = new Error('not allowed!')

@@ -8,6 +8,17 @@ block content
   .col_12
     h1 My Site
     h2 Pages Example
+    form#db-adder.vertical(method='POST', action='./redirects/new')
+      label(for='new-url') URL
+        span.right 「http://～」で始まる文字列
+      input#new-url(type='text', name='url', maxlength=1000, placeholder='http://example.com/')
+      label(for='new-ip') IPアドレス
+        span.right xxx.xxx.xxx.xxx
+      input#new-ip(type='text', name='ip-address', maxlength=1000, placeholder='127.0.0.1')
+      label(for='new-prefix-mask') ネットマスクビット数
+        span.right 1以上32以下の整数値
+      input#new-prefix-mask(type='text', name='prefix-mask', maxlength=1000, placeholder='16')
+      input(type='submit', value='追加')
     ul
       li 
         | visit 
