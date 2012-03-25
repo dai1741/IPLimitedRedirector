@@ -1,12 +1,7 @@
 express = require 'express'
 pg = require 'pg'
 async = require 'async'
-env =
-  if 'DATABASE_URL' of process.env
-    process.env
-  else
-    require './local-env'
-
+env = process.env
 app = express.createServer()
 
 app.configure ->
