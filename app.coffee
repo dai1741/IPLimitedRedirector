@@ -50,9 +50,6 @@ connectDb = (req, res, next) ->
 app.get '/', (req, res) ->
   res.render('index.jade')
 
-app.get '/404', (req, res, next) ->
-  next()
-
 isValidSplitIp = (sections) ->
     return (sections.length == 4 and
         sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256)
@@ -124,14 +121,6 @@ app.post '/redirects/new', validateRedrection, connectDb, (req, res, next) ->
             res.send "created at: #{env.URL}/r/#{hash}"
     )
   tryInsert()
-
-app.get '/403', (req, res, next) ->
-  err = new Error('not allowed!')
-  err.status = 403
-  next(err)
-
-app.get '/500', (req, res, next) ->
-  next(new Error('keyboard cat!'))
 
 # db
 
