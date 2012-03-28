@@ -36,7 +36,11 @@ app.use (err, req, res, next) ->
   # here and next(err) appropriately, or if
   # we possibly recovered from the error, simply next().
   res.status(err.status || 500)
-  res.render('error', error: err)
+  if req.accepts 'json'
+    res.send(error: err.message)
+    console.log err
+  else
+    res.render('error', error: err)
 
 # Routes
 
@@ -118,7 +122,13 @@ app.post '/redirects/new', validateRedrection, connectDb, (req, res, next) ->
             else
               next(new Error(err))
           else
-            res.send "created at: #{env.URL}/r/#{hash}"
+            if req.accepts 'json'
+              res.send(
+                shortUrl: "#{env.URL}/r/#{hash}"
+                confirmingUrl: "#{env.URL}/c/#{hash}"
+              )
+            else
+              res.send "created at: #{env.URL}/r/#{hash}"
     )
   tryInsert()
 

@@ -3,6 +3,34 @@ extends layout
 
 block metas
   title Custom Index
+  :coffeescript
+    $ ->
+      makeNotice = (type, icon, mes) ->
+        return """
+          <div class='notice #{type}'>
+            <span class='icon medium' data-icon='#{icon}' style='display: inline-block'>
+              <span aria-hidden='true'>#{icon}</span>
+            </span>
+            #{mes.html?() ? mes}
+            <a href='#close' class='icon close' data-icon='x'></a>
+          </div>
+        """
+      form = $('form#db-adder').submit ->
+        $.ajax(
+          type: 'POST'
+          url: form.attr 'action'
+          data: form.serialize()
+          success: (data) ->
+            mes = "<div>リンクを作成しました！</div><div><a href='#{data.shortUrl}'>#{data.shortUrl}</a></div>"
+            $(makeNotice('success', 'C', mes)).hide()
+                .prependTo($('#result')).slideDown()
+          error: (jqXHR, text, errorThrown) ->
+            console.log jqXHR
+            console.log errorThrown
+            $(makeNotice('warning', '!', "リンクの作成に失敗しました！")).hide()
+                .prependTo($('#result')).slideDown()
+        )
+        false
 
 block content
   .col_12
@@ -19,6 +47,8 @@ block content
         span.right 1以上32以下の整数値
       input#new-prefix-mask(type='text', name='prefix-mask', maxlength=1000, placeholder='16')
       input(type='submit', value='追加')
+    #result
+      
 
 block footer
   #footer This website was built with <a href="http://www.99lime.com">HTML KickStart</a>
