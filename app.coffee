@@ -32,7 +32,7 @@ app.configure ->
       return
   
     # respond with json
-    if req.accepts('json') 
+    if req.accepts('json')
       res.send(error: 'Not found')
       return
   
@@ -70,8 +70,8 @@ generateRandomString = (size, randomSize) ->
     for i in [1..size + Math.random() * randomSize]).join('')
 
 isValidSplitIp = (sections) ->
-    return (sections.length == 4 and
-        sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256)
+  return (sections.length == 4 and
+    sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256)
 
 isAcceptableIp = (userIp, requiredIp, prefixMask) ->
   addresses = []
@@ -86,11 +86,14 @@ isAcceptableIp = (userIp, requiredIp, prefixMask) ->
 
 app.get '/', (req, res) ->
   
-  req.session.csrfToken = generateRandomString 5, 2 unless req.session.csrfToken
+  req.session.csrfToken =
+    generateRandomString 5, 2 unless req.session.csrfToken
   
-  # req.cookies.url_history == '<shortUrl>:<longUrl>:<ipAddress>:<prefixMask>;<shortURL>...'
+  # req.cookies.url_history ==
+  # '<shortUrl>:<longUrl>:<ipAddress>:<prefixMask>;<shortURL>...'
   historiesStr = req.cookies?.url_history?.split(/;/) ? []
-  histories = ((decodeURIComponent(elm) for elm in str.split /:/) for str in historiesStr)
+  histories = ((decodeURIComponent(elm) for elm in str.split /:/) \
+    for str in historiesStr)
   
   res.render('index.jade',
     histories: histories
@@ -110,14 +113,16 @@ getRedirection = (callback) ->
     unless /[0-9a-zA-Z]+/.test(hash)
       next()
       return
-    req.dbClient.query("SELECT * from urls where hash = $1 limit 1", [hash], (err, result) ->
+    req.dbClient.query("SELECT * from urls
+        where hash = $1 limit 1", [hash], (err, result) ->
       if err
         next(new Error(err))
       else if result.rowCount == 0
         next()
       else
         row = result.rows[0]
-        if isAcceptableIp req.connection.remoteAddress, row.ip_address, row.network_prefix
+        if isAcceptableIp(req.connection.remoteAddress,
+            row.ip_address, row.network_prefix)
           callback(res, req, row.long_url, result, next)
         else
           next(new NotInNetworkError(req.connection.remoteAddress,
@@ -137,7 +142,8 @@ checkSession = (req, res, next) ->
   else if token isnt req.session.csrfToken
     next(new HTTPError(400, 'Invalid access token'))
   else if req.session.lastInserted and \
-      new Date().getTime() - req.session.lastInserted < INSERTION_INTERVAL_SEC * 1000
+      new Date().getTime() - req.session.lastInserted \
+        < INSERTION_INTERVAL_SEC * 1000
     next(new HTTPError(503, 'Accessed too tightly'))
   else
     next()
@@ -148,18 +154,21 @@ validateRedrection = (req, res, next) ->
     ipAddress: req.param('ip-address', '')
     prefixMask: +req.param('prefix-mask', 0)
   
-  isValid = /^https?:\/\//.test(longUrl) and longUrl.length <= MAX_URL_LENGTH \
+  isValid = /^https?:\/\//.test(longUrl) \
+      and longUrl.length <= MAX_URL_LENGTH \
       and isValidSplitIp(ipAddress.split /\./) and 0 < prefixMask <= 32
   
   if isValid then next()
   else next(new HTTPError(400, 'Invalid data format'))
 
-app.post '/redirects/new', checkSession, validateRedrection, connectDb, (req, res, next) ->
+app.post '/redirects/new', checkSession, validateRedrection, \
+    connectDb, (req, res, next) ->
   {longUrl, ipAddress, prefixMask} = req.postingData
   tryInsert = () ->
     hash = generateRandomString 6.9, 2.1
     req.dbClient.query('INSERT INTO urls(
-        long_url, hash, ip_address, network_prefix) VALUES($1, $2, $3, $4)',
+        long_url, hash, ip_address, network_prefix)
+        VALUES($1, $2, $3, $4)', \
         [longUrl, hash, ipAddress, prefixMask], (err, result) ->
           if err
             console.log err
@@ -184,7 +193,8 @@ app.post '/redirects/new', checkSession, validateRedrection, connectDb, (req, re
 ( ->
   req = {}
   connectDb req, null, (err) ->
-    require('./db-initializer').init(req.dbClient, HASH_EXAMPLE1, HASH_EXAMPLE2) unless err
+    require('./db-initializer').init(req.dbClient,
+      HASH_EXAMPLE1, HASH_EXAMPLE2) unless err
 )()
 
 unless module.parent
