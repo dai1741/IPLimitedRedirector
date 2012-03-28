@@ -4,8 +4,16 @@ extends layout
 block metas
   title Custom Index
   script(src='https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.18/jquery-ui.min.js')
+  script(src='/js/jquery.cookie.js')
   link(type='text/css', href='/css/smoothness/jquery-ui-1.8.18.custom.css', rel='stylesheet')
   :coffeescript
+    HISTORY_SIZE = 30
+    addHistory = (shortUrl, longUrl, ipAddress, prefixMask) ->
+      
+      history = ($.cookie('url_history'))?.split(/;/) ? []
+      history.unshift (encodeURIComponent(arguments[i]) for i in [0..3]).join ':'
+      $.cookie('url_history', history.join ';', { expires: 128, path: '/' })
+    
     isValidSplitIp = (sections) ->
       return (sections.length == 4 and
           sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256)
@@ -46,7 +54,10 @@ block metas
         """
       form = $('form#db-adder').submit ->
         form.find('input.error, label').removeClass 'error'
-        validated = validateRedrection $('input#new-url').val(), $('input#new-ip').val(), $('input#new-prefix-mask').val()
+        longUrl = $('input#new-url').val()
+        ipAddress = $('input#new-ip').val()
+        prefixMask = $('input#new-prefix-mask').val()
+        validated = validateRedrection longUrl, ipAddress, prefixMask
         if (v for own k,v of validated when v?).length is 0
           $.ajax(
             type: 'POST'
@@ -56,6 +67,7 @@ block metas
               mes = "<div>リンクを作成しました！</div><div><a href='#{data.shortUrl}'>#{data.shortUrl}</a></div>"
               $(makeNotice('success', 'C', mes)).hide()
                   .prependTo($('#result')).slideDown()
+              addHistory data.shortUrl, longUrl, ipAddress, prefixMask
             error: (jqXHR, text, errorThrown) ->
               console.log jqXHR
               console.log errorThrown
