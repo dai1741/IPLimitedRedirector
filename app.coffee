@@ -22,6 +22,7 @@ app.configure ->
   app.use(express.methodOverride())
   app.use(app.router)
   app.use(express.static(__dirname + '/public'))
+  app.use(express.static(__dirname + '/kickstart'))
 
   app.use (req, res, next) ->
     # respond with html page
