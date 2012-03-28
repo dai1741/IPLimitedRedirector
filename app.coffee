@@ -12,6 +12,7 @@ app.configure ->
   app.use(express.logger())
   app.use(express.limit('500kb'))
   app.use(express.bodyParser())
+  app.use(express.cookieParser())
   app.use(express.methodOverride())
   app.use(app.router)
   app.use(express.static(__dirname + '/public'))
@@ -52,7 +53,13 @@ connectDb = (req, res, next) ->
     else next()
 
 app.get '/', (req, res) ->
-  res.render('index.jade')
+  
+  # req.cookies.url_history == '<shortUrl>:<longUrl>:<ipAddress>:<prefixMask>;<shortURL>...'
+  
+  historiesStr = req.cookies?.url_history?.split(/;/) ? []
+  histories = ((decodeURIComponent(elm) for elm in str.split /:/) for str in historiesStr)
+  
+  res.render('index.jade', histories: histories)
 
 isValidSplitIp = (sections) ->
     return (sections.length == 4 and

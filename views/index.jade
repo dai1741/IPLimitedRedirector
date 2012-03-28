@@ -12,7 +12,8 @@ block metas
     addHistory = (shortUrl, longUrl, ipAddress, prefixMask) ->
       history = ($.cookie('url_history'))?.split(/;/) ? []
       history.unshift (encodeURIComponent(arguments[i]) for i in [0..3]).join ':'
-      $.cookie('url_history', history.join ';', { expires: 128, path: '/' })
+      $.cookie('url_history', history[0..Math.min(history.length, HISTORY_SIZE)].join ';',
+          expires: 128, path: '/')
     
     isValidSplitIp = (sections) ->
       return (sections.length == 4 and
@@ -112,7 +113,22 @@ block content
       input#new-prefix-mask(type='text', name='prefix-mask', maxlength=1000, placeholder='16')
       input(type='submit', value='追加')
     #result
-      
+  .col_12
+    h2 作成履歴
+    table#history
+      tr
+        th 生成されたURL
+        th 元のURL
+        th IPアドレス
+        th ネットマスクビット数
+      each history in histories
+        tr
+          each element, i in history
+            //- [shortUrl, longUrl, ipAddress, prefixMask]
+            - if (i < 2)
+              td: a(href=element)= element
+            - else
+              td= element
 
 block footer
   #footer This website was built with <a href="http://www.99lime.com">HTML KickStart</a>
