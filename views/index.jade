@@ -4,6 +4,33 @@ extends layout
 block metas
   title Custom Index
   :coffeescript
+    isValidSplitIp = (sections) ->
+      return (sections.length == 4 and
+          sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256)
+    
+    validateRedrection = (longUrl, ipAddress, prefixMask) ->
+      longUrl:
+        if /^https?:\/\//.test(longUrl)
+          null
+        else if longUrl is ''
+          'URLが未入力です'
+        else
+          'URLがhttp://かhttps://以外で始まっています'
+      isAddress:
+        if isValidSplitIp(ipAddress.split /\./)
+          null
+        else if ipAddress is ''
+          'IPアドレスが未入力です'
+        else
+          'IPアドレスが不正です'
+      prefixMask:
+        if 0 < +prefixMask <= 32
+          null
+        else if prefixMask is ''
+          'ネットマスクビット数が未入力です'
+        else
+          'ネットマスクビット数が不正です'
+    
     $ ->
       makeNotice = (type, icon, mes) ->
         return """
@@ -16,20 +43,32 @@ block metas
           </div>
         """
       form = $('form#db-adder').submit ->
-        $.ajax(
-          type: 'POST'
-          url: form.attr 'action'
-          data: form.serialize()
-          success: (data) ->
-            mes = "<div>リンクを作成しました！</div><div><a href='#{data.shortUrl}'>#{data.shortUrl}</a></div>"
-            $(makeNotice('success', 'C', mes)).hide()
-                .prependTo($('#result')).slideDown()
-          error: (jqXHR, text, errorThrown) ->
-            console.log jqXHR
-            console.log errorThrown
-            $(makeNotice('warning', '!', "リンクの作成に失敗しました！")).hide()
-                .prependTo($('#result')).slideDown()
-        )
+        form.find('input.error, label').removeClass 'error'
+        validated = validateRedrection $('input#new-url').val(), $('input#new-ip').val(), $('input#new-prefix-mask').val()
+        if (v for own k,v of validated when v?).length is 0
+          $.ajax(
+            type: 'POST'
+            url: form.attr 'action'
+            data: form.serialize()
+            success: (data) ->
+              mes = "<div>リンクを作成しました！</div><div><a href='#{data.shortUrl}'>#{data.shortUrl}</a></div>"
+              $(makeNotice('success', 'C', mes)).hide()
+                  .prependTo($('#result')).slideDown()
+            error: (jqXHR, text, errorThrown) ->
+              console.log jqXHR
+              console.log errorThrown
+              $(makeNotice('warning', '!', "リンクの作成に失敗しました！")).hide()
+                  .prependTo($('#result')).slideDown()
+          )
+        else
+          alert 'INVALID!!\n' + (v for own k,v of validated when v?).join('\n')
+          for own k,v of validated when v?
+            id = {
+              longUrl: 'new-url'
+              isAddress: 'new-ip'
+              prefixMask: 'new-prefix-mask'
+            }[k]
+            form.find("input##{id}, label[for=#{id}]").addClass('error')
         false
 
 block content
