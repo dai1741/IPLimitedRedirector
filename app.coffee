@@ -6,6 +6,8 @@ app = express.createServer()
 
 INSERTION_INTERVAL_SEC = 5
 HISTORY_SIZE = 30
+HASH_EXAMPLE1 = "W5xfIa45"
+HASH_EXAMPLE2 = "X1PZTLm"
 
 app.configure ->
   app.set('views', __dirname + '/views')
@@ -66,21 +68,6 @@ generateRandomString = (size, randomSize) ->
   (allChar.charAt(Math.floor Math.random() * allChar.length) \
     for i in [1..size + Math.random() * randomSize]).join('')
 
-
-app.get '/', (req, res) ->
-  
-  req.session.csrfToken = generateRandomString 5, 2 unless req.session.csrfToken
-  
-  # req.cookies.url_history == '<shortUrl>:<longUrl>:<ipAddress>:<prefixMask>;<shortURL>...'
-  historiesStr = req.cookies?.url_history?.split(/;/) ? []
-  histories = ((decodeURIComponent(elm) for elm in str.split /:/) for str in historiesStr)
-  
-  res.render('index.jade',
-    histories: histories
-    token: req.session.csrfToken
-    insertionIntervalSec: INSERTION_INTERVAL_SEC
-    historySize: HISTORY_SIZE)
-
 isValidSplitIp = (sections) ->
     return (sections.length == 4 and
         sections.every (v) -> /^\d+$/.test(v) and 0 <= v < 256)
@@ -94,6 +81,27 @@ isAcceptableIp = (userIp, requiredIp, prefixMask) ->
         & -(1 << 32 - prefixMask)
     
   return addresses[0] == addresses[1]
+
+
+app.get '/', (req, res) ->
+  
+  req.session.csrfToken = generateRandomString 5, 2 unless req.session.csrfToken
+  
+  # req.cookies.url_history == '<shortUrl>:<longUrl>:<ipAddress>:<prefixMask>;<shortURL>...'
+  historiesStr = req.cookies?.url_history?.split(/;/) ? []
+  histories = ((decodeURIComponent(elm) for elm in str.split /:/) for str in historiesStr)
+  
+  res.render('index.jade',
+    histories: histories
+    token: req.session.csrfToken
+    insertionIntervalSec: INSERTION_INTERVAL_SEC
+    historySize: HISTORY_SIZE
+    env: env
+    hashExample:
+      if isAcceptableIp(req.connection.remoteAddress, '0.0.0.0', 1)
+        HASH_EXAMPLE1
+      else
+        HASH_EXAMPLE2)
 
 getRedirection = (callback) ->
   (req, res, next) ->
@@ -175,7 +183,7 @@ app.post '/redirects/new', checkSession, validateRedrection, connectDb, (req, re
 ( ->
   req = {}
   connectDb req, null, (err) ->
-    require('./db-initializer').init(req.dbClient) unless err
+    require('./db-initializer').init(req.dbClient, HASH_EXAMPLE1, HASH_EXAMPLE2) unless err
 )()
 
 unless module.parent

@@ -125,7 +125,7 @@ block metas
 block content
   .col_12
     h2 IP制限リダイレクター
-    p IPアドレス帯域を制限し、特定の人に対してリンクを公開します。
+    p IPアドレス帯域を制限し、特定のネットワーク上の人に対してリンクを公開します。
     form#db-adder.vertical(method='POST', action='./redirects/new')
       label(for='new-url') URL
         span.right 「http://～」で始まる文字列
@@ -164,6 +164,15 @@ block content
       li Cookieを有効にしないとURLの生成ができません。
       li あまり機密な情報を扱わないでください。リダイレクト先のURLが指定のIPアドレス帯域以外からアクセスできないようになるわけではありません。
       li IPアドレスを利用したアクセス制限は利便性を大きく損うものです。このリダイレクタを使う必要がないなら極力使わないようにしましょう。
+      li
+        | 生成されたURLの
+        code /r/
+        | を
+        code /c/
+        に変えると、リンク先を確認することができます。（例：
+        a(href="#{env.URL}/r/#{hashExample}") #{env.URL}/r/#{hashExample}
+        | 、
+        a(href="#{env.URL}/c/#{hashExample}")#{env.URL}/c/#{hashExample}）
 
 
 block footer
