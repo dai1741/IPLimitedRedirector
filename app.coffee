@@ -4,6 +4,8 @@ async = require 'async'
 env = process.env
 app = express.createServer()
 
+INSERTION_INTERVAL_SEC = 5
+
 app.configure ->
   app.set('views', __dirname + '/views')
   app.set('view engine', 'jade')
@@ -70,7 +72,7 @@ generateRandomString = (size, randomSize) ->
 
 app.get '/', (req, res) ->
   
-  req.session.csrfToken = generateRandomString 5, 2
+  req.session.csrfToken = generateRandomString 5, 2 unless req.session.csrfToken
   
   # req.cookies.url_history == '<shortUrl>:<longUrl>:<ipAddress>:<prefixMask>;<shortURL>...'
   historiesStr = req.cookies?.url_history?.split(/;/) ? []
@@ -123,6 +125,9 @@ checkSession = (req, res, next) ->
     next(new HTTPError(400, 'No access token'))
   else if token isnt req.session.csrfToken
     next(new HTTPError(400, 'Invalid access token'))
+  else if req.session.lastInserted and \
+      new Date().getTime() - req.session.lastInserted < INSERTION_INTERVAL_SEC * 1000
+    next(new HTTPError(503, 'Accessed too tightly'))
   else
     next()
 
@@ -159,6 +164,7 @@ app.post '/redirects/new', checkSession, validateRedrection, connectDb, (req, re
               )
             else
               res.send "created at: #{env.URL}/r/#{hash}"
+            req.session.lastInserted = new Date().getTime()
     )
   tryInsert()
 
