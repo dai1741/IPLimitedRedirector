@@ -38,9 +38,9 @@ block metas
         if 0 < +prefixMask <= 32
           null
         else if prefixMask is ''
-          'ネットマスクビット数が未入力です'
+          'サブネットマスクビット数が未入力です'
         else
-          'ネットマスクビット数が不正です'
+          'サブネットマスクビット数が不正です'
     
     $ ->
       makeNotice = (type, icon, mes) ->
@@ -108,27 +108,34 @@ block content
       label(for='new-ip') IPアドレス
         span.right xxx.xxx.xxx.xxx
       input#new-ip(type='text', name='ip-address', maxlength=1000, placeholder='127.0.0.1')
-      label(for='new-prefix-mask') ネットマスクビット数
+      label(for='new-prefix-mask') サブネットマスク（ビット数）
         span.right 1以上32以下の整数値
       input#new-prefix-mask(type='text', name='prefix-mask', maxlength=1000, placeholder='16')
-      input(type='submit', value='追加')
+      input(type='submit', value='作成する')
     #result
   .col_12
-    h2 作成履歴
+    h2 作成したURL（直近30件）
     table#history
       tr
         th 生成されたURL
         th 元のURL
-        th IPアドレス
-        th ネットマスクビット数
+        th IPアドレス帯域
       each history in histories
+        //- history = [shortUrl, longUrl, ipAddress, prefixMask]
         tr
-          each element, i in history
-            //- [shortUrl, longUrl, ipAddress, prefixMask]
-            - if (i < 2)
-              td: a(href=element)= element
-            - else
-              td= element
+          each i in [0,1]
+            td: a(href=history[i])= history[i]
+          td !{history[2]}/!{history[3]}
+  
+  .col_12
+    h2 備考
+    ul
+      li これはIPアドレス帯域を制限できるURLリダイレクタです。
+      li 一度作成したリダイレクトは削除できません。
+      li IPv6は扱えません。
+      li　あまり機密な情報を扱わないでください。このアプリの制作者にはリダイレクト先URLが可視ですし、リダイレクト先のURLが指定のIPアドレス帯域以外からアクセスできないようになるわけではありません。
+      li IPアドレスを利用したアクセス制限は利便性を大きく損うものです。このリダイレクタを使う必要がないなら極力使わないようにしましょう。
+
 
 block footer
   #footer This website was built with <a href="http://www.99lime.com">HTML KickStart</a>

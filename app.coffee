@@ -32,8 +32,12 @@ app.configure ->
     # default to plain-text. send()
     res.type('txt').send('Not found')
 
-class NotInNetworkError extends Error
-  constructor: (@status, @userIp, @ipAddress, @prefixMask) ->
+class HTTPError extends Error
+  constructor: (@status, @message) ->
+
+class NotInNetworkError extends HTTPError
+  constructor: (@userIp, @ipAddress, @prefixMask) ->
+    super(403)
 
 app.use (err, req, res, next) ->
   # we may use properties of the error object
@@ -96,7 +100,7 @@ getRedirection = (callback) ->
         if isAcceptableIp req.connection.remoteAddress, row.ip_address, row.network_prefix
           callback(res, req, row.long_url, result, next)
         else
-          next(new NotInNetworkError(403, req.connection.remoteAddress, row.ip_address, row.network_prefix))
+          next(new NotInNetworkError(req.connection.remoteAddress, row.ip_address, row.network_prefix))
     )
 
 app.get '/r/:hash', connectDb, getRedirection (res, req, url) ->
@@ -116,7 +120,7 @@ validateRedrection = (req, res, next) ->
       and isValidSplitIp(ipAddress.split /\./) and 0 < prefixMask <= 32
   
   if isValid then next()
-  else next(new Error('invalid!!'))
+  else next(new HTTPError(400, 'Invalid data format'))
 
 app.post '/redirects/new', validateRedrection, connectDb, (req, res, next) ->
   {longUrl, ipAddress, prefixMask} = req.postingData
