@@ -78,7 +78,10 @@ app.get '/', (req, res) ->
   historiesStr = req.cookies?.url_history?.split(/;/) ? []
   histories = ((decodeURIComponent(elm) for elm in str.split /:/) for str in historiesStr)
   
-  res.render('index.jade', histories: histories, token: req.session.csrfToken)
+  res.render('index.jade',
+    histories: histories
+    token: req.session.csrfToken
+    insertionIntervalSec: INSERTION_INTERVAL_SEC)
 
 isValidSplitIp = (sections) ->
     return (sections.length == 4 and

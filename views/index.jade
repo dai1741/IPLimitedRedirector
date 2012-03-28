@@ -61,22 +61,33 @@ block metas
         validated = validateRedrection longUrl, ipAddress, prefixMask
         
         if (v for own k,v of validated when v?).length is 0
-          $.ajax(
-            type: 'POST'
-            url: form.attr 'action'
-            data: form.serialize()
-            success: (data) ->
-              mes = "<div>リンクを作成しました！</div>
-                <div><a href='#{data.shortUrl}'>#{data.shortUrl}</a></div>"
-              $(makeNotice('success', 'C', mes)).hide()
-                  .prependTo($('#result')).slideDown()
-              addHistory data.shortUrl, longUrl, ipAddress, prefixMask
-            error: (jqXHR, text, errorThrown) ->
-              console.log jqXHR
-              console.log errorThrown
-              $(makeNotice('warning', '!', "リンクの作成に失敗しました！")).hide()
-                  .prependTo($('#result')).slideDown()
-          )
+          serialized = form.serialize()
+          form.find('input').attr('disabled', true)
+          form.find('#new-submit').attr('value', 'お待ちください…')
+          
+          $.when(
+            $.ajax(
+              type: 'POST'
+              url: form.attr 'action'
+              data: serialized
+              success: (data) ->
+                mes = "<div>リンクを作成しました！</div>
+                  <div><a href='#{data.shortUrl}'>#{data.shortUrl}</a></div>"
+                $(makeNotice('success', 'C', mes)).hide()
+                    .prependTo($('#result')).slideDown()
+                addHistory data.shortUrl, longUrl, ipAddress, prefixMask
+              error: (jqXHR, text, errorThrown) ->
+                console.log jqXHR
+                console.log errorThrown
+                $(makeNotice('warning', '!', "リンクの作成に失敗しました！")).hide()
+                    .prependTo($('#result')).slideDown()
+              complete: () ->
+                form.find('input:not(#new-submit)').removeAttr('disabled')
+            ), $.Deferred((dfd) ->
+              setTimeout dfd.resolve, "!{insertionIntervalSec+1}" * 1000
+            ).promise()
+          ).always () ->
+            form.find('#new-submit').removeAttr('disabled').attr('value', '作成する')
         else
           errorDialog = $('<div/>').appendTo $('#result')
           ul = $('<ul/>').appendTo errorDialog
@@ -112,7 +123,7 @@ block content
         span.right 1以上32以下の整数値
       input#new-prefix-mask(type='text', name='prefix-mask', maxlength=1000, placeholder='16')
       input(type='hidden', name='token', value=token)
-      input(type='submit', value='作成する')
+      input#new-submit(type='submit', value='作成する')
     #result
   .col_12
     h2 作成したURL（直近30件）
