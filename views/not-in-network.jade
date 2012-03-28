@@ -1,0 +1,18 @@
+
+extends layout
+
+block metas
+  title アクセスできません
+  style
+
+block content
+  .col_12
+    h1 アクセスできません
+    p
+      | あなたが移動しようとしたURLは、ネットワーク
+      strong.ip !{ipAddress}/!{prefixMask}
+      | からのみアクセス可能です。
+    p
+     | あなたのIPアドレスは
+     strong.ip !{clientIp}
+     | です。

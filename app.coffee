@@ -32,11 +32,16 @@ app.configure ->
     # default to plain-text. send()
     res.type('txt').send('Not found')
 
+class NotInNetworkError extends Error
+  constructor: (@status, @userIp, @ipAddress, @prefixMask) ->
+
 app.use (err, req, res, next) ->
   # we may use properties of the error object
   # here and next(err) appropriately, or if
   # we possibly recovered from the error, simply next().
   res.status(err.status || 500)
+  if err instanceof NotInNetworkError
+    res.render('not-in-network', ipAddress: err.ipAddress, prefixMask: err.prefixMask, clientIp: err.userIp)
   if req.accepts 'json'
     res.send(error: err.message)
     console.log err
@@ -88,10 +93,10 @@ getRedirection = (callback) ->
         next()
       else
         row = result.rows[0]
-        if isAcceptableIp req.connection.remoteAddress, row.ip_address, row.prefix
+        if isAcceptableIp req.connection.remoteAddress, row.ip_address, row.network_prefix
           callback(res, req, row.long_url, result, next)
         else
-          next(new Error('Not in range!'))
+          next(new NotInNetworkError(403, req.connection.remoteAddress, row.ip_address, row.network_prefix))
     )
 
 app.get '/r/:hash', connectDb, getRedirection (res, req, url) ->
