@@ -8,6 +8,7 @@ INSERTION_INTERVAL_SEC = 5
 HISTORY_SIZE = 30
 HASH_EXAMPLE1 = "W5xfIa45"
 HASH_EXAMPLE2 = "X1PZTLm"
+MAX_URL_LENGTH = 3000
 
 app.configure ->
   app.set('views', __dirname + '/views')
@@ -147,7 +148,7 @@ validateRedrection = (req, res, next) ->
     ipAddress: req.param('ip-address', '')
     prefixMask: +req.param('prefix-mask', 0)
   
-  isValid = /^https?:\/\//.test(longUrl) \
+  isValid = /^https?:\/\//.test(longUrl) and longUrl.length <= MAX_URL_LENGTH \
       and isValidSplitIp(ipAddress.split /\./) and 0 < prefixMask <= 32
   
   if isValid then next()
