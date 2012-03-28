@@ -6,6 +6,15 @@ block metas
   script(src='/js/jquery-ui-1.8.18.custom.min.js')
   script(src='/js/jquery.cookie.js')
   link(type='text/css', href='/css/smoothness/jquery-ui-1.8.18.custom.css', rel='stylesheet')
+  style
+    .del-button {
+      background: #F5F5F5;
+      border: 1px solid #DDDDDD;
+      border-radius: 5px;
+      box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.196);
+      cursor: pointer;
+      padding: 5px;
+    }
   :coffeescript
     HISTORY_SIZE = '!{historySize}'
     
@@ -105,6 +114,13 @@ block metas
             close: -> $(@).remove()
           )
         false
+      
+      $('span.del-button').click () ->
+        url = encodeURIComponent $(@).closest('tr').find('.short-url').text()
+        history = ($.cookie('url_history'))?.split(/;/) ? []
+        history = (s for s in history when s.match(/^[^:]+/)[0] isnt url)
+        $.cookie('url_history', history.join ';', expires: 128, path: '/')
+        $(@).closest('tr').children().andSelf().fadeOut()
 
 block content
   .col_12
@@ -130,18 +146,20 @@ block content
         th 生成されたURL
         th 元のURL
         th IPアドレス帯域
+        th 画面から削除
       each history in histories
         //- history = [shortUrl, longUrl, ipAddress, prefixMask]
         tr
-          each i in [0,1]
-            td: a(href=history[i])= history[i]
+          td.short-url: a(href=history[0])= history[0]
+          td: a(href=history[1])= history[1]
           td !{history[2]}/!{history[3]}
+          td: span.del-button.icon.medium.gray(data-icon='x')
   
   .col_12
     h2 備考
     ul
       li これはIPアドレス帯域を制限できるURLリダイレクタです。
-      li 一度作成したリダイレクトは削除できません。
+      li 一度作成したリダイレクトは削除できません。「作成したURL」にある削除ボタンを押しても、表示上消えるだけです。
       li IPv6は扱えません。
       li Cookieを有効にしないとURLの生成ができません。
       li あまり機密な情報を扱わないでください。リダイレクト先のURLが指定のIPアドレス帯域以外からアクセスできないようになるわけではありません。
