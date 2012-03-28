@@ -5,6 +5,7 @@ env = process.env
 app = express.createServer()
 
 INSERTION_INTERVAL_SEC = 5
+HISTORY_SIZE = 30
 
 app.configure ->
   app.set('views', __dirname + '/views')
@@ -33,7 +34,7 @@ app.configure ->
       return
   
     # default to plain-text. send()
-    res.type('txt').send('Not found')
+    res.send('Not found')
 
 class HTTPError extends Error
   constructor: (@status, @message) ->
@@ -43,15 +44,11 @@ class NotInNetworkError extends HTTPError
     super(403)
 
 app.use (err, req, res, next) ->
-  # we may use properties of the error object
-  # here and next(err) appropriately, or if
-  # we possibly recovered from the error, simply next().
   res.status(err.status || 500)
   if err instanceof NotInNetworkError
-    res.render('not-in-network', ipAddress: err.ipAddress, prefixMask: err.prefixMask, clientIp: err.userIp)
-  if req.accepts 'json'
+    res.render('not-in-network', err)
+  else if req.accepts 'json'
     res.send(error: err.message)
-    console.log err
   else
     res.render('error', error: err)
 
@@ -81,7 +78,8 @@ app.get '/', (req, res) ->
   res.render('index.jade',
     histories: histories
     token: req.session.csrfToken
-    insertionIntervalSec: INSERTION_INTERVAL_SEC)
+    insertionIntervalSec: INSERTION_INTERVAL_SEC
+    historySize: HISTORY_SIZE)
 
 isValidSplitIp = (sections) ->
     return (sections.length == 4 and
@@ -113,7 +111,8 @@ getRedirection = (callback) ->
         if isAcceptableIp req.connection.remoteAddress, row.ip_address, row.network_prefix
           callback(res, req, row.long_url, result, next)
         else
-          next(new NotInNetworkError(req.connection.remoteAddress, row.ip_address, row.network_prefix))
+          next(new NotInNetworkError(req.connection.remoteAddress,
+              row.ip_address, row.network_prefix))
     )
 
 app.get '/r/:hash', connectDb, getRedirection (res, req, url) ->
