@@ -1,6 +1,5 @@
 express = require 'express'
 pg = require 'pg'
-async = require 'async'
 env = process.env
 app = express.createServer()
 
