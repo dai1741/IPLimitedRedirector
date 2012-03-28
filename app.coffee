@@ -13,6 +13,7 @@ app.configure ->
   app.use(express.limit('500kb'))
   app.use(express.bodyParser())
   app.use(express.cookieParser())
+  app.use(express.session(secret: env.SECRET_KEY))
   app.use(express.methodOverride())
   app.use(app.router)
   app.use(express.static(__dirname + '/public'))
@@ -61,14 +62,21 @@ connectDb = (req, res, next) ->
       next(new Error(err))
     else next()
 
+generateRandomString = (size, randomSize) ->
+  allChar = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  (allChar.charAt(Math.floor Math.random() * allChar.length) \
+    for i in [1..size + Math.random() * randomSize]).join('')
+
+
 app.get '/', (req, res) ->
   
-  # req.cookies.url_history == '<shortUrl>:<longUrl>:<ipAddress>:<prefixMask>;<shortURL>...'
+  req.session.csrfToken = generateRandomString 5, 2
   
+  # req.cookies.url_history == '<shortUrl>:<longUrl>:<ipAddress>:<prefixMask>;<shortURL>...'
   historiesStr = req.cookies?.url_history?.split(/;/) ? []
   histories = ((decodeURIComponent(elm) for elm in str.split /:/) for str in historiesStr)
   
-  res.render('index.jade', histories: histories)
+  res.render('index.jade', histories: histories, token: req.session.csrfToken)
 
 isValidSplitIp = (sections) ->
     return (sections.length == 4 and
@@ -109,6 +117,14 @@ app.get '/r/:hash', connectDb, getRedirection (res, req, url) ->
 app.get '/c/:hash', connectDb, getRedirection (res, req, url) ->
   res.render('confirm-url', url: url)
 
+checkSession = (req, res, next) ->
+  token = req.param('token', '')
+  unless req.session.csrfToken
+    next(new HTTPError(400, 'No access token'))
+  else if token isnt req.session.csrfToken
+    next(new HTTPError(400, 'Invalid access token'))
+  else
+    next()
 
 validateRedrection = (req, res, next) ->
   {longUrl, ipAddress, prefixMask} = req.postingData =
@@ -122,12 +138,10 @@ validateRedrection = (req, res, next) ->
   if isValid then next()
   else next(new HTTPError(400, 'Invalid data format'))
 
-app.post '/redirects/new', validateRedrection, connectDb, (req, res, next) ->
+app.post '/redirects/new', checkSession, validateRedrection, connectDb, (req, res, next) ->
   {longUrl, ipAddress, prefixMask} = req.postingData
-  allChar = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
   tryInsert = () ->
-    hash = (allChar.charAt(Math.floor Math.random() * allChar.length) \
-        for i in [1..6.9 + Math.random() * 2.1]).join('')
+    hash = generateRandomString 6.9, 2.1
     req.dbClient.query('INSERT INTO urls(
         long_url, hash, ip_address, network_prefix) VALUES($1, $2, $3, $4)',
         [longUrl, hash, ipAddress, prefixMask], (err, result) ->

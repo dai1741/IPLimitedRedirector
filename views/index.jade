@@ -111,6 +111,7 @@ block content
       label(for='new-prefix-mask') サブネットマスク（ビット数）
         span.right 1以上32以下の整数値
       input#new-prefix-mask(type='text', name='prefix-mask', maxlength=1000, placeholder='16')
+      input(type='hidden', name='token', value=token)
       input(type='submit', value='作成する')
     #result
   .col_12
