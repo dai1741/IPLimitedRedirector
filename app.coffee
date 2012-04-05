@@ -83,6 +83,8 @@ isAcceptableIp = (userIp, requiredIp, prefixMask) ->
     
   return addresses[0] == addresses[1]
 
+getUserIp = (req) ->
+  req.headers['x-forwarded-for'] or req.connection.remoteAddress
 
 app.get '/', (req, res) ->
   
@@ -102,7 +104,7 @@ app.get '/', (req, res) ->
     historySize: HISTORY_SIZE
     env: env
     hashExample:
-      if isAcceptableIp(req.connection.remoteAddress, '0.0.0.0', 1)
+      if isAcceptableIp(getUserIp(req), '0.0.0.0', 1)
         HASH_EXAMPLE1
       else
         HASH_EXAMPLE2)
@@ -117,15 +119,15 @@ getRedirection = (callback) ->
         where hash = $1 limit 1", [hash], (err, result) ->
       if err
         next(new Error(err))
-      else if result.rowCount == 0
+      else if result.rows.length == 0
         next()
       else
         row = result.rows[0]
-        if isAcceptableIp(req.connection.remoteAddress,
+        if isAcceptableIp(getUserIp(req),
             row.ip_address, row.network_prefix)
           callback(res, req, row, result, next)
         else
-          next(new NotInNetworkError(req.connection.remoteAddress,
+          next(new NotInNetworkError(getUserIp(req),
               row.ip_address, row.network_prefix))
     )
 
@@ -135,7 +137,7 @@ app.get '/r/:hash', connectDb, getRedirection (res, req, data) ->
 app.get '/c/:hash', connectDb, getRedirection (res, req, data) ->
   res.render('confirm-url',
     data: data,
-    userIp: req.connection.remoteAddress
+    userIp: getUserIp(req)
   )
 
 checkSession = (req, res, next) ->

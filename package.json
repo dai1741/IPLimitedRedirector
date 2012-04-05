@@ -1,6 +1,10 @@
 {
   "name": "suniv-redirect",
   "version": "0.0.1",
+  "engines": {
+    "node": "0.6.7",
+    "npm":  "1.1.1"
+  },
   "dependencies": {
     "express": "2.5.4",
     "coffee-script": "1.2.0",
