@@ -1,15 +1,179 @@
 
 extends layout
 
+block metas
+  title IP制限リダイレクター
+  script(src='/js/jquery-ui-1.8.18.custom.min.js')
+  script(src='/js/jquery.cookie.js')
+  link(type='text/css', href='/css/smoothness/jquery-ui-1.8.18.custom.css', rel='stylesheet')
+  style
+    .del-button {
+      background: #F5F5F5;
+      border: 1px solid #DDDDDD;
+      border-radius: 5px;
+      box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.196);
+      cursor: pointer;
+      padding: 5px;
+    }
+  :coffeescript
+    HISTORY_SIZE = '!{historySize}'
+    
+    addHistory = (shortUrl, longUrl, ipAddress, prefixMask) ->
+      history = ($.cookie('url_history'))?.split(/;/) ? []
+      history.unshift (encodeURIComponent(arguments[i]) for i in [0..3]).join ':'
+      $.cookie('url_history', history[0..Math.min(history.length, HISTORY_SIZE)].join ';',
+          expires: 128, path: '/')
+    
+    isValidSplitIp = (sections) ->
+      return (sections.length == 4 and
+          (true for v in sections when /^\d+$/.test(v) and 0 <= v < 256).length == 4)
+    
+    validateRedrection = (longUrl, ipAddress, prefixMask) ->
+      longUrl:
+        if /^https?:\/\//.test(longUrl)
+          null
+        else if longUrl is ''
+          'URLが未入力です'
+        else
+          'URLがhttp://かhttps://以外で始まっています'
+      isAddress:
+        if isValidSplitIp(ipAddress.split /\./)
+          null
+        else if ipAddress is ''
+          'IPアドレスが未入力です'
+        else
+          'IPアドレスが不正です'
+      prefixMask:
+        if 0 < +prefixMask <= 32
+          null
+        else if prefixMask is ''
+          'サブネットマスクビット数が未入力です'
+        else
+          'サブネットマスクビット数が不正です'
+    
+    $ ->
+      makeNotice = (type, icon, mes) ->
+        return """
+          <div class='notice #{type}'>
+            <span class='icon medium' data-icon='#{icon}' style='display: inline-block'>
+              <span aria-hidden='true'>#{icon}</span>
+            </span>
+            #{mes.html?() ? mes}
+            <a href='#close' class='icon close' data-icon='x'></a>
+          </div>
+        """
+      form = $('form#db-adder').submit ->
+        form.find('input.error, label').removeClass 'error'
+        longUrl = $('input#new-url').val()
+        ipAddress = $('input#new-ip').val()
+        prefixMask = $('input#new-prefix-mask').val()
+        validated = validateRedrection longUrl, ipAddress, prefixMask
+        
+        if (v for own k,v of validated when v?).length is 0
+          serialized = form.serialize()
+          form.find('input').attr('disabled', true)
+          form.find('#new-submit').attr('value', 'お待ちください…')
+          
+          $.when(
+            $.ajax(
+              type: 'POST'
+              url: form.attr 'action'
+              data: serialized
+              success: (data) ->
+                mes = "<div>リンクを作成しました！</div>
+                  <div><a href='#{data.shortUrl}'>#{data.shortUrl}</a></div>"
+                $(makeNotice('success', 'C', mes)).hide()
+                    .prependTo($('#result')).slideDown()
+                addHistory data.shortUrl, longUrl, ipAddress, prefixMask
+              error: (jqXHR) ->
+                $(makeNotice('warning', '!', "リンクの作成に失敗しました！")).hide()
+                    .prependTo($('#result')).slideDown()
+              complete: () ->
+                form.find('input:not(#new-submit)').removeAttr('disabled')
+            ), $.Deferred((dfd) ->
+              setTimeout dfd.resolve, "!{insertionIntervalSec+1}" * 1000
+            ).promise()
+          ).always () ->
+            form.find('#new-submit').removeAttr('disabled').attr('value', '作成する')
+        else
+          errorDialog = $('<div/>').appendTo $('#result')
+          ul = $('<ul/>').appendTo errorDialog
+          
+          for own k,v of validated when v?
+            $('<li/>').text(v).appendTo ul
+            
+            id = {
+              longUrl: 'new-url'
+              isAddress: 'new-ip'
+              prefixMask: 'new-prefix-mask'
+            }[k]
+            form.find("input##{id}, label[for=#{id}]").addClass('error')
+          
+          errorDialog.dialog(
+            title: 'エラー'
+            close: -> $(@).remove()
+          )
+        false
+      
+      $('span.del-button').click () ->
+        url = encodeURIComponent $(@).closest('tr').find('.short-url').text()
+        history = ($.cookie('url_history'))?.split(/;/) ? []
+        history = (s for s in history when s.match(/^[^:]+/)[0] isnt url)
+        $.cookie('url_history', history.join ';', expires: 128, path: '/')
+        $(@).closest('tr').children().andSelf().fadeOut()
+
 block content
-  h2 Pages Example
-  ul
-    li 
-      | visit 
-      a(href="/500") 500
-    li
-      | visit
-      a(href="/404") 404
-    li
-      | visit
-      a(href='/403') 403
+  .col_12
+    h2 IP制限リダイレクター
+    p IPアドレス帯域を制限し、特定のネットワーク上の人に対してリンクを公開します。
+    form#db-adder.vertical(method='POST', action='./redirects/new')
+      label(for='new-url') URL
+        span.right 「http://～」で始まる文字列
+      input#new-url(type='text', name='url', maxlength=1000, placeholder='http://example.com/')
+      label(for='new-ip') IPアドレス
+        span.right xxx.xxx.xxx.xxx
+      input#new-ip(type='text', name='ip-address', maxlength=1000, placeholder='127.0.0.1')
+      label(for='new-prefix-mask') サブネットマスク（ビット数）
+        span.right 1以上32以下の整数値
+      input#new-prefix-mask(type='text', name='prefix-mask', maxlength=1000, placeholder='16')
+      input(type='hidden', name='token', value=token)
+      input#new-submit(type='submit', value='作成する')
+    #result
+  .col_12
+    h2 作成したURL（直近!{historySize}件）
+    table#history
+      tr
+        th 生成されたURL
+        th 元のURL
+        th IPアドレス帯域
+        th 画面から削除
+      each history in histories
+        //- history = [shortUrl, longUrl, ipAddress, prefixMask]
+        tr
+          td.short-url: a(href=history[0])= history[0]
+          td: a(href=history[1])= history[1]
+          td !{history[2]}/!{history[3]}
+          td: span.del-button.icon.medium.gray(data-icon='x')
+  
+  .col_12
+    h2 備考
+    ul
+      li これはIPアドレス帯域を制限できるURLリダイレクタです。
+      li 一度作成したリダイレクトは削除できません。「作成したURL」にある削除ボタンを押しても、表示上消えるだけです。
+      li IPv6は扱えません。
+      li Cookieを有効にしないとURLの生成ができません。
+      li あまり機密な情報を扱わないでください。リダイレクト先のURLが指定のIPアドレス帯域以外からアクセスできないようになるわけではありません。
+      li IPアドレスを利用したアクセス制限は利便性を大きく損うものです。このリダイレクタを使う必要がないなら極力使わないようにしましょう。
+      li
+        | 生成されたURLの
+        code /r/
+        | を
+        code /c/
+        に変えると、リンク先を確認することができます。（例：
+        a(href="#{env.URL}/r/#{hashExample}") #{env.URL}/r/#{hashExample}
+        | 、
+        a(href="#{env.URL}/c/#{hashExample}")#{env.URL}/c/#{hashExample}）
+
+
+block footer
+  #footer This website was built with <a href="http://www.99lime.com">HTML KickStart</a>

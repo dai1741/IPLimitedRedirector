@@ -1,0 +1,3 @@
+[submodule "kickstart"]
+	path = kickstart
+	url = git://github.com/joshuagatcke/HTML-KickStart.git

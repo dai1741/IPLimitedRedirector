@@ -1,0 +1,29 @@
+
+extends layout
+
+block metas
+  title ジャンプ先の確認
+  style
+    .redirect {
+      font-size: 180%;
+      display: block;
+      line-height: 1.5
+    }
+
+block content
+  .col_12
+    h1 ジャンプ先の確認
+    p
+      | あなたは
+      a.redirect(href=data.long_url) #{data.long_url}
+      | に移動しようとしています。よろしければリンクをクリックしてください
+  .col_12
+    h2 IPアドレス情報
+    p
+      | このリダイレクトは、IPアドレス帯域
+      strong.ip !{data.ip_address}/!{data.network_prefix}
+      | からのみアクセス可能です。
+    p
+      | あなたのIPアドレスは
+      strong.ip= userIp
+      | で、上記の帯域内に入っています。

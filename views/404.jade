@@ -1,5 +1,12 @@
 
-extends error
+extends layout
+
+block metas
+  title ページがありません
 
 block content
-  h2 Cannot find #{url}
+  .col_12
+    h1 ページがありません
+    p
+      strong= url
+      | というページはありません
