@@ -123,17 +123,20 @@ getRedirection = (callback) ->
         row = result.rows[0]
         if isAcceptableIp(req.connection.remoteAddress,
             row.ip_address, row.network_prefix)
-          callback(res, req, row.long_url, result, next)
+          callback(res, req, row, result, next)
         else
           next(new NotInNetworkError(req.connection.remoteAddress,
               row.ip_address, row.network_prefix))
     )
 
-app.get '/r/:hash', connectDb, getRedirection (res, req, url) ->
-  res.redirect(url)
+app.get '/r/:hash', connectDb, getRedirection (res, req, data) ->
+  res.redirect(data.long_url)
 
-app.get '/c/:hash', connectDb, getRedirection (res, req, url) ->
-  res.render('confirm-url', url: url)
+app.get '/c/:hash', connectDb, getRedirection (res, req, data) ->
+  res.render('confirm-url',
+    data: data,
+    userIp: req.connection.remoteAddress
+  )
 
 checkSession = (req, res, next) ->
   token = req.param('token', '')
