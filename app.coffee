@@ -117,7 +117,7 @@ getRedirection = (callback) ->
         where hash = $1 limit 1", [hash], (err, result) ->
       if err
         next(new Error(err))
-      else if result.rowCount == 0
+      else if result.rows.length == 0
         next()
       else
         row = result.rows[0]
