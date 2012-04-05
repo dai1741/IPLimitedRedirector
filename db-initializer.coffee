@@ -17,8 +17,8 @@ exports.init = (client, ex1, ex2) ->
     unless err # new table created
       # example
       for ex in [
-        ["http://exapmle.com", ex1, "0.0.0.0", 1]
-        ["http://exapmle.com", ex2, "128.0.0.0", 1]
+        ["http://example.com", ex1, "0.0.0.0", 1]
+        ["http://example.com", ex2, "128.0.0.0", 1]
       ]
         client.query('INSERT INTO urls(
             long_url, hash, ip_address, network_prefix) VALUES($1, $2, $3, $4)',
