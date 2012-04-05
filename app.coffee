@@ -164,7 +164,7 @@ validateRedrection = (req, res, next) ->
 app.post '/redirects/new', checkSession, validateRedrection, \
     connectDb, (req, res, next) ->
   {longUrl, ipAddress, prefixMask} = req.postingData
-  tryInsert = () ->
+  tryInsert = (depth) ->
     hash = generateRandomString 6.9, 2.1
     req.dbClient.query('INSERT INTO urls(
         long_url, hash, ip_address, network_prefix)
@@ -172,8 +172,8 @@ app.post '/redirects/new', checkSession, validateRedrection, \
         [longUrl, hash, ipAddress, prefixMask], (err, result) ->
           if err
             console.log err
-            if err.code is 23505 # UNIQUE VIOLATION
-              tryInsert() # re-create hash and retry
+            if depth > 0 and err.code is 23505 # UNIQUE VIOLATION
+              tryInsert(depth - 1) # re-create hash and retry
             else
               next(new Error(err))
           else
@@ -186,7 +186,7 @@ app.post '/redirects/new', checkSession, validateRedrection, \
               res.send "created at: #{env.URL}/r/#{hash}"
             req.session.lastInserted = new Date().getTime()
     )
-  tryInsert()
+  tryInsert(10)
 
 # db
 
